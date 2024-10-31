@@ -3122,7 +3122,7 @@
         console.log(chats);
         const chatsHTML = chats.map(chat => `
           <div class="chat__item" onclick="openChat(${chat.user_id}, '${chat.first_name} ${chat.last_name}')">
-            <img src="${chat.avatar || '/assets/member_avatar_453.png'}" alt="">
+            <img style="max-width: 100px; width: 47px;height: 47px; border-radius: 100%;" src="${chat.avatar || '/assets/member_avatar_453.png'}" alt="">
             <div style="display: flex; flex-direction: column; text-align: left;">
               <h4>${chat.first_name} ${chat.last_name} <span class="chat_item__id">ID ${chat.user_id}</span>
                 <span class="chat_item__time">${new Date(chat.last_msg_date).toLocaleString('en-EN',
