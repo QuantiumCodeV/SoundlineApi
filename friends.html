@@ -3171,7 +3171,6 @@
           if (messages.length > 0) {
             console.log("=======");
             console.log(messages);
-            console.log(user);
             console.log("=======");
             const newMessagesHTML = messages.map(message => `
               <div class="user_chat__message ${message.user_id === message.recipient_id ? 'sent' : 'received'}">
