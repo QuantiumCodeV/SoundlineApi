@@ -2910,7 +2910,11 @@
     <div class="user_chat__footer">
       <div class="user_chat__footer__input">
         <input type="text" placeholder="Начните новое сообщение" id="messageInput">
-        <svg id="sendMessageButton" data-friendId="" xmlns="http://www.w3.org/2000/svg" width="13" height="12"
+        <svg id="sendMessageButton" style="width: 100%;
+        height: 100%;
+        padding: 5px;
+        
+        cursor: pointer;" data-friendId="" xmlns="http://www.w3.org/2000/svg" width="13" height="12"
           viewBox="0 0 13 12" fill="none" onclick="sendMessageCurrent(this)">
           <path
             d="M12.5303 6.53033C12.8232 6.23744 12.8232 5.76256 12.5303 5.46967L7.75736 0.696698C7.46447 0.403805 6.98959 0.403805 6.6967 0.696699C6.40381 0.989592 6.40381 1.46447 6.6967 1.75736L10.9393 6L6.6967 10.2426C6.40381 10.5355 6.40381 11.0104 6.6967 11.3033C6.98959 11.5962 7.46447 11.5962 7.75736 11.3033L12.5303 6.53033ZM6.55671e-08 6.75L12 6.75L12 5.25L-6.55671e-08 5.25L6.55671e-08 6.75Z"
@@ -3173,7 +3177,7 @@
             console.log(messages);
             console.log("=======");
             const newMessagesHTML = messages.map(message => `
-              <div class="user_chat__message ${message.user_id === message.recipient_id ? 'sent' : 'received'}">
+              <div class="user_chat__message ${message.user_id !== message.recipient_id ? 'sent' : 'received'}">
                 <div class="message__content">${message.message}</div>
                 <div class="message_time">${new Date(message.created_at).toLocaleString('en-EN', 
                   { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false })}</div>
