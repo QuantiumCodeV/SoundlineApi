@@ -3121,13 +3121,13 @@
       if (chats.length > 0) {
         console.log(chats);
         const chatsHTML = chats.map(chat => `
-          <div class="chat__item" onclick="openChat(${chat.recipient.id}, '${chat.recipient.name}')">
-            <img src="${chat.recipient.avatar || '/assets/member_avatar_453.png'}" alt="">
+          <div class="chat__item" onclick="openChat(${chat.user_id}, '${chat.first_name} ${chat.last_name}')">
+            <img src="${chat.avatar || '/assets/member_avatar_453.png'}" alt="">
             <div style="display: flex; flex-direction: column; text-align: left;">
-              <h4>${chat.recipient.name} <span class="chat_item__id">ID ${chat.recipient.id}</span> 
-                <span class="chat_item__time">${new Date(chat.last_message.created_at).toLocaleString('en-EN', 
+              <h4>${chat.first_name} ${chat.last_name} <span class="chat_item__id">ID ${chat.user_id}</span>
+                <span class="chat_item__time">${new Date(chat.last_msg_date).toLocaleString('en-EN',
                   { month: 'short', day: 'numeric' })}</span></h4>
-              <p>${chat.last_message.message}</p>
+              <p>${chat.last_msg_text}</p>
             </div>
             ${chat.unread_count > 0 ? `<span class="unread-badge">${chat.unread_count}</span>` : ''}
           </div>
