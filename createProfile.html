@@ -1701,7 +1701,7 @@
         const reader = new FileReader();
         reader.onload = async function(event) {
           const base64Data = event.target.result;
-          const result = await updateProfile({ photo: base64Data });
+          const result = await updateProfile({ avatar: base64Data });
           if (result.success) {
             console.log("Фото профиля успешно обновлено");
             localStorage.setItem("photo", base64Data);

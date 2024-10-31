@@ -1,14 +1,24 @@
-const backendDomain =
+/*const backendDomain =
   window.location.hostname.includes("localhost") ||
   window.location.hostname.includes("127.0.0.1") ||
   window.location.hostname.includes("91.184.243.94") ||
   window.location.hostname.includes("FIN_OTOX")
     ? "https://cattlecubes.com"
     : `https://api.${window.location.hostname}`;
-
-//const backendDomain = "https://cattlecubes.com";
+*/
+const backendDomain = "https://cattlecubes.com";
 // Функция для сохранения данных в localStorage
 
+
+
+const saveToLocalStorage = (key, value) => {
+  localStorage.setItem(key, value);
+};
+
+// Функция для получения данных из localStorage
+const getFromLocalStorage = (key) => {
+  return localStorage.getItem(key);
+};
 async function checkFriendsPageAuth() {
   // Проверяем находимся ли на странице /friends
   if (
@@ -33,16 +43,6 @@ async function checkFriendsPageAuth() {
   return true;
 }
 checkFriendsPageAuth();
-
-const saveToLocalStorage = (key, value) => {
-  localStorage.setItem(key, value);
-};
-
-// Функция для получения данных из localStorage
-const getFromLocalStorage = (key) => {
-  return localStorage.getItem(key);
-};
-
 // Функция для регистрации пользователя
 async function registerUser(username, password) {
   const response = await fetch(`${backendDomain}/soundline/register/`, {
@@ -92,9 +92,11 @@ async function getProfile() {
   const result = await response.json();
   if (response.ok) {
     return result;
-  } else if (response.status === 403) {
+  } else if (response.status === 403 || response.status === 401) {
     // Делаем лог-аут пользователя
-    logout();
+    if(window.location.pathname !== "/login"){
+      logout();
+    }
     return null;
   } else {
     return null;

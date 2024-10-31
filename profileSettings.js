@@ -274,6 +274,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.body.insertAdjacentHTML("beforeend", profileSettingsHtml);
 
   getProfile().then((res) => {
+    console.log(res);
     if (res) {
       if (res.avatar) {
         $("#avatar_1").attr("src", res.avatar);

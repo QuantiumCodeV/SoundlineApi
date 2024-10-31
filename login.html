@@ -29629,7 +29629,7 @@
       .then((result) => {
         if (result.success) {
           localStorage.setItem("email", e.value);
-          window.location.href = "/createProfile"; // Замените на нужный URL
+          window.location.href = "/home"; // Замените на нужный URL
         } else {
           createErrorLogin(result.error);
         }
@@ -29668,4 +29668,12 @@
         createErrorLogin("An unexpected error occurred.");
       });
   }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    getProfile().then((res) => {
+      if (res.username) {
+        window.location.href = "/home";
+      }
+    });
+  });
 </script>

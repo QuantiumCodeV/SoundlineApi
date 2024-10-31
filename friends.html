@@ -1099,7 +1099,7 @@
                       <div id="inputContainer1" class="hidden">
                         <input type="text" id="meetingInput1" placeholder="">
                         <div class="line"></div>
-                        <button type="button" style="font-weight: 700" onclick="addFriend1()">ADD</button>
+                        <button type="button" style="font-weight: 700" onclick="addFriend1('#meetingInput1', '#button_block1')">ADD</button>
                       </div>
 
                     </a>
@@ -1810,7 +1810,7 @@
                           <div id="inputContainer" class="hidden">
                             <input type="text" id="meetingInput" placeholder="">
                             <div class="line"></div>
-                            <button type="button" style="font-weight: 700" onclick="addFriend()">ADD</button>
+                            <button type="button" style="font-weight: 700" onclick="addFriend1('#meetingInput', '#button_block')">ADD</button>
                           </div>
 
                         </a>
@@ -2302,24 +2302,56 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="/feedback.js"></script>
 <script src="/profileSettings.js"></script>
+<style>
+  .starAnimationBlock {
+                                position: relative;
+                                overflow: visible !important;
+                              }
+
+                              .starAnimationBlock:focus .starAnimation {
+                                animation: star 1s infinite ease-in-out;
+                                transform: rotate(-30deg);
+                              }
+
+                              
+                              @keyframes star {
+                                0% {
+                                  transform: rotate(0deg);
+                                }
+
+                                50% {
+                                  transform: rotate(30deg);
+                                }
+
+                                100% {
+                                  transform: rotate(0deg);
+                                }
+                              }
+</style>
 <script>
   // Функция для рендеринга таблицы друзей
-function renderFriendsTable(friends) {
-  const $friendsTableBody = $("#friends_table_body");
-  $friendsTableBody.empty(); // Очищаем текущее содержимое таблицы
+  async function renderFriendsTable() {
+    const $friendsTableBody = $("#friends_table_body");
+    $friendsTableBody.empty(); // Очищаем текущее содержимое таблицы
 
-  friends.forEach(friend => {
-    const friendNotMe = friend.userFirst.id === authUserId ? friend.userSecond : friend.userFirst; // Замените authUserId на реальный ID пользователя
-    const mutualFriends = friend.commonFriends(friendNotMe.id); // Предполагается, что это функция, возвращающая общих друзей
+    const friendsData = await getFriends();
+    console.log(friendsData);
+    if (!friendsData) return;
+    if (friendsData.friends.length > 0 || friendsData.incoming.length > 0 || friendsData.pending.length > 0 || friendsData.blocked.length > 0 ) {
+      $("#friends_empty_table").hide();
+      $("#friends_table").show();
+    }
+    const {friends, incoming, pending, blocked} = friendsData;
 
-    if (friend.status !== `blocked_to_user_${friendNotMe.id}`) {
-      const $row = $("<tr>").addClass(`bg-neutral-50 hover:bg-neutral-100 transition-colors min-h-[content-height] ${friend.status === 'friend' ? 'yellow' : (friend.status === 'pending' ? 'gray' : 'red')}`);
+    // Отображаем друзей
+    friends.forEach(friend => {
+      const $row = $("<tr>").addClass("bg-neutral-50 hover:bg-neutral-100 transition-colors min-h-[content-height] yellow");
 
       $row.html(`
         <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-l border-t-0">
           <div class="text-small">
             <div class="h-full w-full">
-              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">${friendNotMe.login}</div>
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">${friend.username}</div>
             </div>
           </div>
         </td>
@@ -2340,10 +2372,10 @@ function renderFriendsTable(friends) {
         <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
           <div class="text-small">
             <div class="h-full w-full">
-              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">
-                ${mutualFriends.length ? mutualFriends.map(mf => `<img class="avatar" src="${mf.avatar ? mf.avatar : '/assets/member_avatar_453.png'}" alt="">`).join('') : '-'}
-                ${mutualFriends.length > 3 ? `<div class="avatar-count">+${mutualFriends.length - 3}</div>` : ''}
-              </div>
+                <div class="rounded w-28 h-6 bg-neutral-300 centerContent" ${friend.mutual_friends.length ? 'style="background: none; padding: 0;"' : ''}>
+                  ${friend.mutual_friends.length ? friend.mutual_friends.slice(0,3).map(mf => `<img class="avatar" src="${mf.avatar || '/assets/member_avatar_453.png'}" alt="">`).join('') : '-'}
+                  ${friend.mutual_friends.length > 3 ? `<div class="avatar-count">+${friend.mutual_friends.length - 3}</div>` : ''}
+                </div>
             </div>
           </div>
         </td>
@@ -2357,32 +2389,238 @@ function renderFriendsTable(friends) {
         <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
           <div class="text-small">
             <div class="h-full w-full">
-              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">${friend.status.includes('blocked_to_user_') ? 'Blocked' : friend.status}</div>
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">Friend</div>
             </div>
           </div>
         </td>
         <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
           <div class="flex gap-2">
-            <button class="action" onclick="openChatFromButton('${friendNotMe.id}', '${friendNotMe.name}')" ${friend.status === "pending" ? 'style="background-color: #D3CCB8; pointer-events: none;"' : ''} ${friend.status.includes('blocked_to_user_') ? 'style="background-color: #FB9A70; pointer-events: none;"' : ''}>
+            <button class="action" onclick="openChatFromButton('${friend.id}', '${friend.first_name}')">
               <img src="/assets/message.png" alt="">
             </button>
-            <button class="action starAnimationBlock" ${friend.status === "pending" ? 'style="background-color: #D3CCB8;"' : ''} ${friend.status.includes('blocked_to_user_') ? 'style="background-color: #FB9A70;"' : ''}>
+            <button class="action starAnimationBlock">
               <img src="/assets/call.png" alt="">
               <img style="position: absolute; top: -20px; right: -15px;" src="/assets/star.png" class="starAnimation" alt="">
             </button>
-            ${friend.status === "friend" ? `<button class="action" onclick="deleteFriend(this, '${friendNotMe.id}')"><img src="/assets/deleteFriend.png" alt=""></button>` : ''}
-            ${friend.status === "pending" && friend.user_id_second === authUserId ? `<button class="action" onclick="addFriendRequest(this, '${friendNotMe.id}')"><img src="/assets/addFriend.png" alt=""></button>` : ''}
-            ${friend.status !== `blocked_to_user_${authUserId}` ? `<button class="action" onclick="${friend.status === "pending" ? `deleteFriend(this, '${friendNotMe.id}')` : `blockFriend(this, '${friendNotMe.id}')`}"><img src="/assets/block.png" alt=""></button>` : `<button class="action" onclick="addFriendRequest(this, '${friendNotMe.id}')"><img src="/assets/addFriend.png" alt=""></button>`}
-            <button class="action" onclick="copyId(this, '${friendNotMe.id}')">ID</button>
+            <button class="action" onclick="deleteFriend(this, '${friend.id}')">
+              <img src="/assets/deleteFriend.png" alt="">
+            </button>
+            <button class="action" onclick="blockFriend(this, '${friend.id}')">
+              <img src="/assets/block.png" alt="">
+            </button>
+            <button class="action" onclick="copyId(this, '${friend.id}')">ID</button>
           </div>
         </td>
       `);
 
       $friendsTableBody.append($row);
-    }
+    });
+
+    // Отображаем входящие заявки
+    incoming.forEach(friend => {
+      const $row = $("<tr>").addClass("bg-neutral-50 hover:bg-neutral-100 transition-colors min-h-[content-height] gray");
+      $row.html(`
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-l border-t-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">${friend.username}</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">Online</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">-</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">-</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">No</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">Incoming Request</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="flex gap-2">
+            <button style="pointer-events: none;background-color: #D3CCB8;" class="action" onclick="openChatFromButton('${friend.id}', '${friend.first_name}')">
+              <img src="/assets/message.png" alt="">
+            </button>
+            <button style="pointer-events: none;background-color: #D3CCB8;" class="action starAnimationBlock">
+              <img src="/assets/call.png" alt="">
+              <img style="position: absolute; top: -20px; right: -15px;" src="/assets/star.png" class="starAnimation" alt="">
+            </button>
+            <button class="action" onclick="addFriendRequest(this, '${friend.id}')">
+              <img src="/assets/addFriend.png" alt="">
+            </button>
+            <button class="action" onclick="blockFriend(this, '${friend.id}')">
+              <img src="/assets/block.png" alt="">
+            </button>
+            <button class="action" onclick="copyId(this, '${friend.id}')">ID</button>
+          </div>
+        </td>
+      `);
+      $friendsTableBody.append($row);
+    });
+
+    // Отображаем исходящие заявки 
+    pending.forEach(friend => {
+      const $row = $("<tr>").addClass("bg-neutral-50 hover:bg-neutral-100 transition-colors min-h-[content-height] gray");
+      $row.html(`
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-l border-t-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">${friend.username}</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">Online</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">-</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">-</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">No</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">Pending Request</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="flex gap-2">
+           <button style="pointer-events: none;background-color: #D3CCB8;" class="action" onclick="openChatFromButton('${friend.id}', '${friend.first_name}')">
+              <img src="/assets/message.png" alt="">
+            </button>
+            <button style="pointer-events: none;background-color: #D3CCB8;" class="action starAnimationBlock">
+              <img src="/assets/call.png" alt="">
+              <img style="position: absolute; top: -20px; right: -15px;" src="/assets/star.png" class="starAnimation" alt="">
+            </button>
+            <button style="pointer-events: none;background-color: #D3CCB8;" class="action" onclick="deleteFriend(this, '${friend.id}')">
+              <img src="/assets/deleteFriend.png" alt="">
+            </button>
+            <button  class="action" onclick="blockFriend(this, '${friend.id}')">
+              <img src="/assets/block.png" alt="">
+            </button>
+            <button class="action" onclick="copyId(this, '${friend.id}')">ID</button>
+          </div>
+        </td>
+      `);
+      $friendsTableBody.append($row);
+    });
+
+    // Отображаем заблокированных пользователей
+    blocked.forEach(friend => {
+      const $row = $("<tr>").addClass("bg-neutral-50 hover:bg-neutral-100 transition-colors min-h-[content-height] red");
+      $row.html(`
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-l border-t-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">${friend.username}</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">Online</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">-</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">-</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">No</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="text-small">
+            <div class="h-full w-full">
+              <div class="rounded w-28 h-6 bg-neutral-300 centerContent">Blocked</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap border border-neutral-300 border-t-0 border-l-0">
+          <div class="flex gap-2">
+            <button style="pointer-events: none;background-color: #FB9A70;" class="action" onclick="openChatFromButton('${friend.id}', '${friend.first_name}')">
+              <img src="/assets/message.png" alt="">
+            </button>
+            <button style="pointer-events: none;background-color: #FB9A70;" class="action starAnimationBlock">
+              <img src="/assets/call.png" alt="">
+              <img style="position: absolute; top: -20px; right: -15px;" src="/assets/star.png" class="starAnimation" alt="">
+            </button>
+            <button style="pointer-events: none;background-color: #FB9A70;" class="action" onclick="deleteFriend(this, '${friend.id}')">
+              <img src="/assets/deleteFriend.png" alt="">
+            </button>
+            <button class="action" onclick="blockFriend(this, '${friend.id}')">
+              <img src="/assets/close.png" alt="">
+            </button>
+            <button class="action" onclick="copyId(this, '${friend.id}')">ID</button>
+          </div>
+        </td>
+      `);
+      $friendsTableBody.append($row);
     });
   }
-  
+  renderFriendsTable();
 </script>
 <script>
   function showInput() {
@@ -2415,42 +2653,34 @@ function renderFriendsTable(friends) {
     }, 10); // Небольшая задержка для переходов
   }
 
-  function addFriendCurrent() {
-    const meetingCode = $("#meetingInput").val();
+  function addFriendCurrent(input) {
+    const meetingCode = $(input).val();
     const $buttonBlock = $("#button_block");
 
-    $.ajax({
-      url: "{{ route('api.friends.add",
-      type: "POST",
-      data: {
-        user_identifier: meetingCode,
-        _token: "{{ csrf_token() }}"
-      },
-      success: function(data) {
-        console.log(data)
-        if (data.message == "success") {
-          window.location.reload()
+    addFriend(meetingCode)
+      .then(result => {
+        console.log(result);
+        if (result.success) {
+          window.location.reload();
         } else {
           $buttonBlock.addClass("error_field");
           setTimeout(function() {
             $buttonBlock.removeClass("error_field");
-          }, 2000)
+          }, 2000);
         }
-      },
-      error: function(data) {
-        console.log(data)
+      })
+      .catch(error => {
+        console.log(error);
         $buttonBlock.addClass("error_field");
         setTimeout(function() {
           $buttonBlock.removeClass("error_field");
-        }, 2000)
-      }
-    })
-
+        }, 2000);
+      });
   }
 
-  function addFriend1() {
-    const meetingCode = $("#meetingInput1").val();
-    const $buttonBlock = $("#button_block1");
+  function addFriend1(input, buttonBlock) {
+    const meetingCode = $(input).val();
+    const $buttonBlock = $(buttonBlock);
 
     addFriend(meetingCode)
       .then(result => {
@@ -2524,90 +2754,65 @@ function renderFriendsTable(friends) {
   }
 
   function deleteFriend(element, friendId) {
-    $.ajax({
-      url: "{{ route('api.friends.delete",
-      type: "POST",
-      data: {
-        friend_id: friendId,
-        _token: "{{ csrf_token() }}"
-      },
-      success: function(data) {
-        console.log(data)
-        if (data.message == "success") {
-          window.location.reload()
+    deleteFriend(friendId)
+      .then(result => {
+        if (result.success) {
+          window.location.reload();
         } else {
           $(element).addClass("error_field");
           setTimeout(function() {
             $(element).removeClass("error_field");
-          }, 2000)
+          }, 2000);
         }
-      },
-      error: function(data) {
-        console.log(data)
-        $(element).addClass("error_field");
+      })
+      .catch(error => {
+        console.error(error);
+        $(element).addClass("error_field"); 
         setTimeout(function() {
           $(element).removeClass("error_field");
-        }, 2000)
-      }
-    })
+        }, 2000);
+      });
   }
 
   function addFriendRequest(element, friendId) {
-    $.ajax({
-      url: "{{ route('api.friends.accept",
-      type: "POST",
-      data: {
-        friend_id: friendId,
-        _token: "{{ csrf_token() }}"
-      },
-      success: function(data) {
-        console.log(data)
-        if (data.message == "success") {
-          window.location.reload()
+    respondToFriendRequest(friendId, 'accept')
+      .then(result => {
+        if (result.success) {
+          window.location.reload();
         } else {
           $(element).addClass("error_field");
           setTimeout(function() {
             $(element).removeClass("error_field");
-          }, 2000)
+          }, 2000);
         }
-      },
-      error: function(data) {
-        console.log(data)
+      })
+      .catch(error => {
+        console.error(error);
         $(element).addClass("error_field");
         setTimeout(function() {
           $(element).removeClass("error_field");
-        }, 2000)
-      }
-    })
+        }, 2000);
+      });
   }
-
   function blockFriend(element, friendId) {
-    $.ajax({
-      url: "{{ route('api.friends.block",
-      type: "POST",
-      data: {
-        friend_id: friendId,
-        _token: "{{ csrf_token() }}"
-      },
-      success: function(data) {
-        console.log(data)
-        if (data.message == "success") {
-          window.location.reload()
+    toggleBlockFriend(friendId)
+      .then(result => {
+        if (result.success) {
+          window.location.reload();
         } else {
           $(element).addClass("error_field");
           setTimeout(function() {
             $(element).removeClass("error_field");
-          }, 2000)
+          }, 2000);
         }
-      },
-      error: function(data) {
-        console.log(data)
+      })
+      .catch(error => {
+        console.error(error);
         $(element).addClass("error_field");
         setTimeout(function() {
           $(element).removeClass("error_field");
-        }, 2000)
-      }
-    })
+        }, 2000);
+      });
   }
 
   function copyId(element, friendId) {
@@ -2644,31 +2849,9 @@ function renderFriendsTable(friends) {
     </svg>
   </div>
   <div class="chat__list" id="chatList">
-
-    @if(count($chats) > 0)
-    @foreach($chats as $chat)
-    <div class="chat__item" onclick="openChat({{ $chat['recipient']['id'] }}, '{{ $chat['recipient']['name'] }}')">
-
-      <img
-        src="{{ $chat['recipient']['avatar'] ? asset('storage/' . $chat['recipient']['avatar']) : asset('assets/member_avatar_453.png"
-        alt="">
-      <div style="display: flex;
-    flex-direction: column;
-    text-align: left;">
-        <h4>{{ $chat['recipient']['name'] }} <span class="chat_item__id">ID {{ $chat['recipient']['id'] }}</span> <span class="chat_item__time">{{ \Carbon\Carbon::parse($chat['last_message']['created_at'])->format('M j</span></h4>
-        <p>{{ $chat['last_message']['message'] }}</p>
-      </div>
-      @if($chat['unread_count'] > 0)
-      <span class="unread-badge">{{ $chat['unread_count'] }}</span>
-      @endif
+    <div id="chatListContent">
+      <!-- Чаты будут добавляться динамически -->
     </div>
-    @endforeach
-    @else
-    <img src="/assets/chat.png" alt="">
-    <h2>
-      There are no messages yet
-    </h2>
-    @endif
   </div>
   <style>
     .chat__item {
@@ -2728,7 +2911,7 @@ function renderFriendsTable(friends) {
       <div class="user_chat__footer__input">
         <input type="text" placeholder="Начните новое сообщение" id="messageInput">
         <svg id="sendMessageButton" data-friendId="" xmlns="http://www.w3.org/2000/svg" width="13" height="12"
-          viewBox="0 0 13 12" fill="none" onclick="sendMessage(this)">
+          viewBox="0 0 13 12" fill="none" onclick="sendMessageCurrent(this)">
           <path
             d="M12.5303 6.53033C12.8232 6.23744 12.8232 5.76256 12.5303 5.46967L7.75736 0.696698C7.46447 0.403805 6.98959 0.403805 6.6967 0.696699C6.40381 0.989592 6.40381 1.46447 6.6967 1.75736L10.9393 6L6.6967 10.2426C6.40381 10.5355 6.40381 11.0104 6.6967 11.3033C6.98959 11.5962 7.46447 11.5962 7.75736 11.3033L12.5303 6.53033ZM6.55671e-08 6.75L12 6.75L12 5.25L-6.55671e-08 5.25L6.55671e-08 6.75Z"
             fill="black" />
@@ -2742,7 +2925,6 @@ function renderFriendsTable(friends) {
     padding: 8px 15px;
     box-shadow: 0px -7px 7px rgba(0, 0, 0, 0.05);
   }
-
 
   .user_chat__footer__input {
     display: flex;
@@ -2760,7 +2942,6 @@ function renderFriendsTable(friends) {
 
   .user_chat__footer__input input {
     background-color: #F3F3F3;
-
   }
 </style>
 <style>
@@ -2868,7 +3049,6 @@ function renderFriendsTable(friends) {
     max-width: 100px;
     width: 47px;
     border-radius: 100%;
-
   }
 
   .chat__item {
@@ -2920,6 +3100,7 @@ function renderFriendsTable(friends) {
         $(this).addClass("show");
         next();
       });
+      loadChats(); // Загрузка чатов при открытии
     } else {
       $chatContainer.removeClass("show").delay(300).queue(function(next) {
         $(this).css("display", "none");
@@ -2928,7 +3109,38 @@ function renderFriendsTable(friends) {
     }
   }
 
-  function openChat(chatId, chatName) {
+  async function loadChats() {
+    try {
+      const chats = await getChats();
+      const chatListContent = document.getElementById('chatListContent');
+      
+      if (chats.length > 0) {
+        console.log(chats);
+        const chatsHTML = chats.map(chat => `
+          <div class="chat__item" onclick="openChat(${chat.recipient.id}, '${chat.recipient.name}')">
+            <img src="${chat.recipient.avatar || '/assets/member_avatar_453.png'}" alt="">
+            <div style="display: flex; flex-direction: column; text-align: left;">
+              <h4>${chat.recipient.name} <span class="chat_item__id">ID ${chat.recipient.id}</span> 
+                <span class="chat_item__time">${new Date(chat.last_message.created_at).toLocaleString('en-EN', 
+                  { month: 'short', day: 'numeric' })}</span></h4>
+              <p>${chat.last_message.message}</p>
+            </div>
+            ${chat.unread_count > 0 ? `<span class="unread-badge">${chat.unread_count}</span>` : ''}
+          </div>
+        `).join('');
+        chatListContent.innerHTML = chatsHTML;
+      } else {
+        chatListContent.innerHTML = `
+          <img src="/assets/chat.png" alt="">
+          <h2>There are no messages yet</h2>
+        `;
+      }
+    } catch (error) {
+      console.error('Error loading chats:', error);
+    }
+  }
+
+  async function openChat(chatId, chatName) {
     if (currentChatId !== null) {
       clearInterval(waitMessageInterval);
     }
@@ -2948,52 +3160,36 @@ function renderFriendsTable(friends) {
     $("#chatName").text(chatName);
     $("#chatId").text(`ID ${chatId}`);
     $("#sendMessageButton").attr("data-friendId", chatId);
-
-    // Отметить сообщения как прочитанные
-    $.ajax({
-      url: "{{ route('messages.markAsRead",
-      type: "POST",
-      data: {
-        _token: "{{ csrf_token() }}",
-        friendId: chatId
-      },
-      success: function(response) {
-        console.log('Сообщения отмечены как прочитанные');
-        // Обновить счетчик непрочитанных сообщений
-        updateUnreadCount(chatId, 0);
-      }
-    });
-
-    waitMessageInterval = setInterval(function() {
-      $.ajax({
-        url: "{{ route('messages.index",
-        type: "POST",
-        data: {
-          _token: "{{ csrf_token() }}",
-          user_id: '{{ auth()->user()->id }}',
-          friendId: chatId,
-          lastMessageId: lastMessageId
-        },
-        success: function(response) {
-          if (response.messages.length > 0) {
-            let newMessagesHTML = '';
-            response.messages.forEach(function(message) {
-              newMessagesHTML += `<div class="user_chat__message ${message.user_id === ? 'sent' : 'received'}">
-                  <div class="message__content">${message.message}</div>
-                  <div class="message_time">${new Date(message.created_at).toLocaleString('en-EN', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false })}</div>
-                </div>
-              `;
-            });
+    const user = await getProfile();
+    try {
+      //await markMessagesAsRead(chatId);
+      updateUnreadCount(chatId, 0);
+      
+      waitMessageInterval = setInterval(async () => {
+        try {
+          const messages = await getChatMessages(chatId);
+          if (messages.length > 0) {
+            const newMessagesHTML = messages.map(message => `
+              <div class="user_chat__message ${message.user_id != user.id ? 'sent' : 'received'}">
+                <div class="message__content">${message.message}</div>
+                <div class="message_time">${new Date(message.created_at).toLocaleString('en-EN', 
+                  { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false })}</div>
+              </div>
+            `).join('');
 
             if (newMessagesHTML !== $chatBody.html()) {
               $chatBody.html(newMessagesHTML).scrollTop($chatBody[0].scrollHeight);
             }
 
-            lastMessageId = response.messages[response.messages.length - 1].id;
+            lastMessageId = messages[messages.length - 1].id;
           }
+        } catch (error) {
+          console.error('Error fetching messages:', error);
         }
-      });
-    }, 1000);
+      }, 1000);
+    } catch (error) {
+      console.error('Error opening chat:', error);
+    }
   }
 
   function backToChats() {
@@ -3008,44 +3204,21 @@ function renderFriendsTable(friends) {
     clearInterval(waitMessageInterval);
     currentChatId = null;
     lastMessageId = null;
+    loadChats(); // Перезагрузка чатов при возврате
   }
 
-  function sendMessage(element) {
+  async function sendMessageCurrent(element) {
     const $messageInput = $("#messageInput");
     const message = $messageInput.val().trim();
     if (message) {
-      $.ajax({
-        url: "{{ route('messages.store",
-        type: "POST",
-        data: {
-          _token: "{{ csrf_token() }}",
-          user_id: "{{ auth()->user()->id }}",
-          friendId: $(element).attr('data-friendId'),
-          message: message
-        },
-        success: function(response) {
-          console.log(response);
-          appendMessage(message, 'sent');
-          $messageInput.val('');
-        },
-        error: function(xhr, status, error) {
-          console.log(xhr.responseText);
-        }
-      })
+      try {
+        const response = await sendMessage($(element).attr('data-friendId'), message);
+        appendMessage(message, 'sent');
+        $messageInput.val('');
+      } catch (error) {
+        console.error('Error sending message:', error);
+      }
     }
-  }
-
-  function showWaitingIndicator() {
-    const $chatBody = $("#chatBody");
-    const $waitingIndicator = $("<div>", {
-      id: "waitingIndicator",
-      class: "message received"
-    }).html('<span class="typing-indicator">...</span>');
-    $chatBody.append($waitingIndicator);
-  }
-
-  function hideWaitingIndicator() {
-    $("#waitingIndicator").remove();
   }
 
   function appendMessage(message, type) {
@@ -3059,17 +3232,15 @@ function renderFriendsTable(friends) {
       minute: '2-digit'
     };
     
-    const $messageElement = $("<div>", {
-      class: `user_chat__message ${type}`
-    }).append(
-      $("<div>", {
-    timeElement.textContent = now.toLocaleString('en-EN', options);
-
-    messageElement.appendChild(contentElement);
-    messageElement.appendChild(timeElement);
-
-    chatBody.appendChild(messageElement);
-    chatBody.scrollTop = chatBody.scrollHeight;
+    const messageHTML = `
+      <div class="user_chat__message ${type}">
+        <div class="message__content">${message}</div>
+        <div class="message_time">${now.toLocaleString('en-EN', options)}</div>
+      </div>
+    `;
+    
+    $chatBody.append(messageHTML);
+    $chatBody.scrollTop($chatBody[0].scrollHeight);
   }
 
   function updateUnreadCount(chatId, count) {
@@ -3089,10 +3260,9 @@ function renderFriendsTable(friends) {
     }
   }
 
-  // Слушатель для клавиши Enter в поле ввода
   document.getElementById('messageInput').addEventListener('keypress', function(event) {
     if (event.key === 'Enter') {
-      sendMessage(document.getElementById('sendMessageButton'));
+      sendMessageCurrent(document.getElementById('sendMessageButton'));
     }
   });
 </script>
