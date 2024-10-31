@@ -3169,6 +3169,10 @@
         try {
           const messages = await getChatMessages(chatId);
           if (messages.length > 0) {
+            console.log("=======");
+            console.log(messages);
+            console.log(user);
+            console.log("=======");
             const newMessagesHTML = messages.map(message => `
               <div class="user_chat__message ${message.user_id != user.id ? 'sent' : 'received'}">
                 <div class="message__content">${message.message}</div>
